@@ -115,11 +115,11 @@ def send_message():
 
     global current_socket
     if current_socket:
-        msg = message_entry.get()
+        msg = message_entry.get("1.0", tk.END).strip()
         if msg:
             current_socket.sendall(msg.encode())
             chat_box.insert(tk.END, f"Você: {msg}\n")
-            message_entry.delete(0, tk.END)
+            message_entry.delete("1.0", tk.END)
 
 def receive_messages():
     """Recebe mensagens da sala."""
@@ -139,15 +139,15 @@ root.title("Chat Multisala")
 connect_to_server()
 
 # Área de mensagens (agora no topo)
-chat_box = tk.Text(root, width=50, height=15)
+chat_box = tk.Text(root, width=120, height=30)
 chat_box.grid(row=0, column=0, columnspan=6, padx=5, pady=5)
 
 # Campo de entrada da mensagem (logo abaixo das mensagens)
-message_entry = tk.Entry(root, width=40)
+message_entry = tk.Text(root, height=5, width=80)
 message_entry.grid(row=1, column=0, columnspan=4, padx=5, pady=5)
 
 # Botão de enviar mensagem
-send_button = tk.Button(root, text="Enviar", command=send_message)
+send_button = tk.Button(root, text="Enviar", command=send_message, width=20, height=4)
 send_button.grid(row=1, column=4, columnspan=2, padx=5, pady=5)
 
 # Botões organizados em uma única linha

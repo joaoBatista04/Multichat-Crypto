@@ -98,14 +98,13 @@ def handle_room_client(client_socket, sala):
     """Repassa mensagens para todos na sala."""
     while True:
         try:
-            msg = client_socket.recv(1024)
-            print(msg)
+            msg = client_socket.recv(1024).decode()
             if not msg:
                 break
 
             for client in salas[sala][1]:
                 if client != client_socket:
-                    client.sendall(msg)
+                    client.sendall(msg.encode())
 
         except:
             break

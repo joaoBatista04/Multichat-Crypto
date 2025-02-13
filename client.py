@@ -203,7 +203,7 @@ def receive_messages():
 
 # Criando interface gráfica
 root = tk.Tk()
-root.title("Chat Multisala")
+root.title("UFES Chat")
 
 connect_to_server()
 

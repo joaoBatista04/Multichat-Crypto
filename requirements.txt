@@ -2,3 +2,4 @@ tkinter
 bcrypt
 hashlib
 cryptography
+python-dotenv

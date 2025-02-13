@@ -14,7 +14,7 @@ def encrypt_message(key, plaintext):
     encryptor = cipher.encryptor()
     
     padding_length = 16 - len(plaintext) % 16
-    padded_plaintext = plaintext + chr(padding_length) * padding_length  # Preenchendo com o número de bytes necessários
+    padded_plaintext = plaintext + chr(padding_length) * padding_length
     
     ciphertext = encryptor.update(padded_plaintext.encode()) + encryptor.finalize()
     

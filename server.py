@@ -63,6 +63,10 @@ def handle_client(client_socket):
                     response = f"ERRO: Sala '{sala}' não existe."
                 client_socket.sendall(response.encode())
 
+            elif command == "LIST_ROOMS":
+                response = "\n".join(salas.keys()) if salas else " "
+                client_socket.sendall(response.encode())
+
     except ConnectionResetError:
         pass
     finally:
@@ -94,13 +98,14 @@ def handle_room_client(client_socket, sala):
     """Repassa mensagens para todos na sala."""
     while True:
         try:
-            msg = client_socket.recv(1024).decode()
+            msg = client_socket.recv(1024)
+            print(msg)
             if not msg:
                 break
 
             for client in salas[sala][1]:
                 if client != client_socket:
-                    client.sendall(msg.encode())
+                    client.sendall(msg)
 
         except:
             break

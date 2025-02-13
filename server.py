@@ -3,24 +3,42 @@ import threading
 import bcrypt
 import pickle
 import os
+import tkinter as tk
+from dotenv import load_dotenv
+import logging
 
-HOST = "0.0.0.0"
-PORT = 5000
-USER_DB_FILE = "users.db"
+load_dotenv()
+
+HOST = os.getenv("HOST")
+PORT = int(os.getenv("SERVER_PORT"))
+USER_DB_FILE = os.getenv("USER_DB_FILE")
+
+logging.basicConfig(
+    filename=os.getenv("SERVER_LOG_FILE"),        # Nome do arquivo de log
+    filemode='a',                  # Modo de abertura do arquivo (a para append)
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Formato da mensagem de log
+    level=logging.ERROR             # Nível de log (INFO ou superior)
+)
 
 salas = {}
 
-# Carregar ou criar banco de dados de usuários
-if os.path.exists(USER_DB_FILE):
-    with open(USER_DB_FILE, "rb") as f:
-        users = pickle.load(f)
-else:
-    users = {}
+try:
+    # Carregar ou criar banco de dados de usuários
+    if os.path.exists(USER_DB_FILE):
+        with open(USER_DB_FILE, "rb") as f:
+            users = pickle.load(f)
+    else:
+        users = {}
+except FileNotFoundError:
+    logging.error("Não foi possível manipular o arquivo {USER_DB_FILE}")
 
 def save_users():
     """Salva usuários no banco de dados."""
-    with open(USER_DB_FILE, "wb") as f:
-        pickle.dump(users, f)
+    try:
+        with open(USER_DB_FILE, "wb") as f:
+            pickle.dump(users, f)
+    except FileNotFoundError:
+        logging.error("Não foi possível manipular o arquivo {USER_DB_FILE}.")
 
 def handle_client(client_socket):
     """Gerencia comandos de login e registro."""
@@ -68,24 +86,34 @@ def handle_client(client_socket):
                 client_socket.sendall(response.encode())
 
     except ConnectionResetError:
+        logging.error("A conexão foi recusada.")
+        pass
+    except socket.timeout:
+        logging.error("Tempo de execução esgotado.")
+        pass
+    except Exception as e:
+        logging.error(f"Exceção: {e}")
         pass
     finally:
         client_socket.close()
 
 def create_room(sala):
     """Cria um socket para a sala."""
-    if sala in salas:
-        return f"Sala '{sala}' já existe."
+    try:
+        if sala in salas:
+            return f"Sala '{sala}' já existe."
 
-    sala_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sala_socket.bind(("0.0.0.0", 0))
-    sala_socket.listen(5)
+        sala_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sala_socket.bind(("0.0.0.0", 0))
+        sala_socket.listen(5)
 
-    _, sala_port = sala_socket.getsockname()
-    salas[sala] = (sala_socket, [])
+        _, sala_port = sala_socket.getsockname()
+        salas[sala] = (sala_socket, [])
 
-    threading.Thread(target=listen_room, args=(sala, sala_socket), daemon=True).start()
-    return f"Sala '{sala}' criada na porta {sala_port}."
+        threading.Thread(target=listen_room, args=(sala, sala_socket), daemon=True).start()
+        return f"Sala '{sala}' criada na porta {sala_port}."
+    except Exception as e:
+        logging.error(f"Exceção: {e}")
 
 def listen_room(sala, sala_socket):
     """Gerencia conexões de clientes na sala."""
@@ -95,19 +123,23 @@ def listen_room(sala, sala_socket):
         threading.Thread(target=handle_room_client, args=(client_socket, sala), daemon=True).start()
 
 def handle_room_client(client_socket, sala):
-    """Repassa mensagens para todos na sala."""
     while True:
         try:
             msg = client_socket.recv(1024)
-            print(msg)
             if not msg:
                 break
 
             for client in salas[sala][1]:
                 if client != client_socket:
                     client.sendall(msg)
-
-        except:
+        except ConnectionResetError:
+            logging.error("A conexão foi recusada.")
+            break
+        except socket.timeout:
+            logging.error("Tempo de execução esgotado.")
+            break
+        except Exception as e:
+            logging.error(f"Exceção: {e}")
             break
 
     salas[sala][1].remove(client_socket)

@@ -2,11 +2,23 @@ import socket
 import threading
 import tkinter as tk
 from tkinter import simpledialog, messagebox
+from dotenv import load_dotenv
+import logging
 
 from crypto import *
 
-SERVER_IP = "127.0.0.1"
-SERVER_PORT = 5000
+load_dotenv()
+
+SERVER_IP = os.getenv("SERVER_IP")
+SERVER_PORT = int(os.getenv("SERVER_PORT"))
+
+logging.basicConfig(
+    filename=os.getenv("CLIENT_LOG_FILE"),        # Nome do arquivo de log
+    filemode='a',                  # Modo de abertura do arquivo (a para append)
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Formato da mensagem de log
+    level=logging.ERROR             # Nível de log (INFO ou superior)
+)
+
 current_socket = None
 running = False
 in_room = False  # Variável para controlar se o usuário já está em uma sala
@@ -136,29 +148,35 @@ def leave_room():
         chat_box.insert(tk.END, "Você saiu da sala. Entre em alguma sala para continuar o bate-papo\n")
 
 def send_message():
-    """Envia uma mensagem na sala atual, se o usuário estiver logado."""
-    if not logged_in:
-        messagebox.showwarning("Atenção", "Você precisa estar logado para enviar mensagens.")
-        return
+    try:
+        if not logged_in:
+            messagebox.showwarning("Atenção", "Você precisa estar logado para enviar mensagens.")
+            return
 
-    if not in_room:
-        messagebox.showwarning("Atenção", "Você precisa entrar em uma sala para enviar mensagens.")
-        return
+        if not in_room:
+            messagebox.showwarning("Atenção", "Você precisa entrar em uma sala para enviar mensagens.")
+            return
 
-    global current_socket, current_room
-    if current_socket:
-        msg = message_entry.get("1.0", tk.END).strip()
-        msgsend = client_name + ": "
-        msgsend += msg + "\n"
+        global current_socket, current_room
+        if current_socket:
+            msg = message_entry.get("1.0", tk.END).strip()
+            msgsend = client_name + ": "
+            msgsend += msg + "\n"
 
-        key = generate_key_from_string(current_room)
+            key = generate_key_from_string(current_room)
 
-        msgsend = encrypt_message(key, msgsend)
+            msgsend = encrypt_message(key, msgsend)
 
-        if msg:
-            current_socket.sendall(msgsend)
-            chat_box.insert(tk.END, f"\nVocê: {msg}\n", "right")
-            message_entry.delete("1.0", tk.END)
+            if msg:
+                current_socket.sendall(msgsend)
+                chat_box.insert(tk.END, f"\nVocê: {msg}\n", "right")
+                message_entry.delete("1.0", tk.END)
+    except ConnectionRefusedError:
+        logging.error("Conexão recusada pelo servidor.")
+    except socket.timeout:
+        logging.error("Tempo de conexão esgotado")
+    except Exception as e:
+        logging.error(f"Exceção: {e}")
 
 def receive_messages():
     """Recebe mensagens da sala."""
@@ -173,7 +191,14 @@ def receive_messages():
 
             if msg:
                 chat_box.insert(tk.END, msg + "\n", "left")
-        except:
+        except ConnectionRefusedError:
+            logging.error("Conexão recusada pelo servidor.")
+            break
+        except socket.timeout:
+            logging.error("Tempo de conexão esgotado")
+            break
+        except Exception as e:
+            logging.error(f"Exceção: {e}")
             break
 
 # Criando interface gráfica

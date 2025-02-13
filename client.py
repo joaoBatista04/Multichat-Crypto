@@ -3,6 +3,8 @@ import threading
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 
+from crypto import *
+
 SERVER_IP = "127.0.0.1"
 SERVER_PORT = 5000
 current_socket = None
@@ -10,6 +12,7 @@ running = False
 in_room = False  # Variável para controlar se o usuário já está em uma sala
 logged_in = False  # Variável para controlar se o usuário está logado
 client_name = ""
+current_room = ""
 
 def connect_to_server():
     """Conecta ao servidor central."""
@@ -41,6 +44,8 @@ def login():
         response = send_command(f"LOGIN {username} {password}")
         if response == "LOGIN_OK":
             logged_in = True
+            chat_box.delete("1.0", tk.END)
+            chat_box.insert(tk.END, "Escolha alguma sala para entrar ou crie sua própria sala!\n")
             messagebox.showinfo("Login", "Login bem-sucedido!")
             client_name = username
         else:
@@ -57,7 +62,8 @@ def logout():
             current_socket.close()
             current_socket = None
             in_room = False
-            chat_box.insert(tk.END, "Você foi deslogado e saiu da sala.\n")
+        chat_box.delete("1.0", tk.END)
+        chat_box.insert(tk.END, "Você foi deslogado. Faça login novamente para continuar o bate-papo ou registre-se!\n")
         messagebox.showinfo("Deslogar", "Você foi deslogado com sucesso!")
     else:
         messagebox.showwarning("Atenção", "Você não está logado.")
@@ -75,7 +81,7 @@ def create_room():
 
 def join_room():
     """Lista salas disponíveis e permite escolher uma para entrar."""
-    global current_socket, running, in_room
+    global current_socket, running, in_room, current_room
     
     if not logged_in:
         messagebox.showwarning("Atenção", "Você precisa estar logado para entrar em uma sala.")
@@ -89,7 +95,7 @@ def join_room():
     salas = response.split("\n") if response else []
     
     if len(salas) == 1 and salas[0] == " ":
-        messagebox.showinfo("Salas", "Não há salas disponíveis no momento.")
+        messagebox.showinfo("Salas", "Não há salas disponíveis no momento. Sinta-se livre para criar uma!")
         return
     
     room_name = simpledialog.askstring("Entrar na Sala", "Escolha uma sala:\n\n" + "\n".join(salas) + "\n\n" + "Caso não encontre a sala desejada, sinta-se livre para criá-la\n")
@@ -102,8 +108,10 @@ def join_room():
             current_socket.connect((SERVER_IP, port))
             running = True
             in_room = True
+            current_room = room_name
             threading.Thread(target=receive_messages, daemon=True).start()
             messagebox.showinfo("Sucesso", f"Entrou na sala '{room_name}'!")
+            chat_box.delete("1.0", tk.END)
         else:
             messagebox.showerror("Erro", response)
     else:
@@ -112,7 +120,7 @@ def join_room():
 
 def leave_room():
     """Sai da sala atual e libera o usuário para entrar em outra."""
-    global current_socket, running, in_room
+    global current_socket, running, in_room, current_room
 
     if in_room == False:
         messagebox.showwarning("Sair da Sala", "Você não está conectado a uma sala!")
@@ -123,7 +131,9 @@ def leave_room():
         current_socket.close()
         current_socket = None
         in_room = False  # Agora o usuário pode entrar em outra sala
-        chat_box.insert(tk.END, "Você saiu da sala.\n")
+        current_room = ""
+        chat_box.delete("1.0", tk.END)
+        chat_box.insert(tk.END, "Você saiu da sala. Entre em alguma sala para continuar o bate-papo\n")
 
 def send_message():
     """Envia uma mensagem na sala atual, se o usuário estiver logado."""
@@ -135,22 +145,32 @@ def send_message():
         messagebox.showwarning("Atenção", "Você precisa entrar em uma sala para enviar mensagens.")
         return
 
-    global current_socket
+    global current_socket, current_room
     if current_socket:
         msg = message_entry.get("1.0", tk.END).strip()
         msgsend = client_name + ": "
-        msgsend += msg
+        msgsend += msg + "\n"
+
+        key = generate_key_from_string(current_room)
+
+        msgsend = encrypt_message(key, msgsend)
+
         if msg:
-            current_socket.sendall(msgsend.encode())
-            chat_box.insert(tk.END, f"Você: {msg}\n", "right")
+            current_socket.sendall(msgsend)
+            chat_box.insert(tk.END, f"\nVocê: {msg}\n", "right")
             message_entry.delete("1.0", tk.END)
 
 def receive_messages():
     """Recebe mensagens da sala."""
-    global current_socket, running
+    global current_socket, running, current_room
     while running:
         try:
-            msg = current_socket.recv(1024).decode()
+            msg = current_socket.recv(1024)
+            
+            key = generate_key_from_string(current_room)
+
+            msg = decrypt_message(key, msg)
+
             if msg:
                 chat_box.insert(tk.END, msg + "\n", "left")
         except:
@@ -167,6 +187,8 @@ chat_box = tk.Text(root, width=120, height=30)
 chat_box.grid(row=0, column=0, columnspan=6, padx=5, pady=5)
 chat_box.tag_configure("right", justify="right")
 chat_box.tag_configure("left", justify="left")
+
+chat_box.insert(tk.END, "Faça login ou registre-se para utilizar o UFES Chat")
 
 # Campo de entrada da mensagem (logo abaixo das mensagens)
 message_entry = tk.Text(root, height=5, width=80)

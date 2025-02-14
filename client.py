@@ -13,7 +13,7 @@ SERVER_IP = os.getenv("SERVER_IP")
 SERVER_PORT = int(os.getenv("SERVER_PORT"))
 
 logging.basicConfig(
-    filename=os.getenv("CLIENT_LOG_FILE"),        # Nome do arquivo de log
+    filename=os.getenv("CLIENT_LOG"),        # Nome do arquivo de log
     filemode='a',                  # Modo de abertura do arquivo (a para append)
     format='%(asctime)s - %(levelname)s - %(message)s',  # Formato da mensagem de log
     level=logging.ERROR             # Nível de log (INFO ou superior)
@@ -89,7 +89,10 @@ def create_room():
     room_name = simpledialog.askstring("Criar Sala", "Nome da sala:")
     if room_name:
         response = send_command(f"CREATE {room_name}")
-        messagebox.showinfo("Resposta", response)
+        if(response.startswith("ERRO")):
+            messagebox.showerror("Erro na criação da sala", response)
+        else:
+            messagebox.showinfo("Resposta", response)
 
 def join_room():
     """Lista salas disponíveis e permite escolher uma para entrar."""
@@ -233,7 +236,7 @@ register_button.grid(row=2, column=1, padx=5, pady=5)
 create_button = tk.Button(root, text="Criar Sala", command=create_room)
 create_button.grid(row=2, column=2, padx=5, pady=5)
 
-join_button = tk.Button(root, text="Entrar Sala", command=join_room)
+join_button = tk.Button(root, text="Entrar na Sala", command=join_room)
 join_button.grid(row=2, column=3, padx=5, pady=5)
 
 leave_button = tk.Button(root, text="Sair da Sala", command=leave_room)

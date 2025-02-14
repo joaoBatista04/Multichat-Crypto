@@ -9,12 +9,13 @@ import logging
 
 load_dotenv()
 
-HOST = os.getenv("HOST")
+SERVER_IP = os.getenv("SERVER_IP")
 PORT = int(os.getenv("SERVER_PORT"))
 USER_DB_FILE = os.getenv("USER_DB_FILE")
+MAX_ROOMS_AMOUNT = 15
 
 logging.basicConfig(
-    filename=os.getenv("SERVER_LOG_FILE"),        # Nome do arquivo de log
+    filename=os.getenv("SERVER_LOG"),        # Nome do arquivo de log
     filemode='a',                  # Modo de abertura do arquivo (a para append)
     format='%(asctime)s - %(levelname)s - %(message)s',  # Formato da mensagem de log
     level=logging.ERROR             # Nível de log (INFO ou superior)
@@ -68,9 +69,12 @@ def handle_client(client_socket):
                     client_socket.sendall("ERRO: Credenciais inválidas.".encode())
 
             elif command == "CREATE":
-                sala = args[0]
-                response = create_room(sala)
-                client_socket.sendall(response.encode())
+                if(len(salas) < MAX_ROOMS_AMOUNT):
+                    sala = args[0]
+                    response = create_room(sala)
+                    client_socket.sendall(response.encode())
+                else:
+                    client_socket.sendall("ERRO: Número máximo de salas atingido.".encode())
 
             elif command == "JOIN":
                 sala = args[0]
@@ -148,7 +152,7 @@ def handle_room_client(client_socket, sala):
 def main_server():
     """Servidor central."""
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((HOST, PORT))
+    server_socket.bind((SERVER_IP, PORT))
     server_socket.listen(5)
     print(f"Servidor rodando na porta {PORT}...")
 

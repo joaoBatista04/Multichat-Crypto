@@ -16,10 +16,10 @@ SERVER_PORT = int(os.getenv("SERVER_PORT"))
 
 #Configuração do arquivo de log dos clientes
 logging.basicConfig(
-    filename=os.getenv("CLIENT_LOG"),        # Nome do arquivo de log
-    filemode='a',                  # Modo de abertura do arquivo (a para append)
-    format='%(asctime)s - %(levelname)s - %(message)s',  # Formato da mensagem de log
-    level=logging.ERROR             # Nível de log (INFO ou superior)
+    filename=os.getenv("CLIENT_LOG"),        
+    filemode='a',                  
+    format='%(asctime)s - %(levelname)s - %(message)s',  
+    level=logging.ERROR             
 )
 
 #Definição inicial de variáveis globais de clientes

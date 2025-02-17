@@ -20,10 +20,10 @@ MAX_ROOMS_AMOUNT = 15
 
 #Configuração do arquivo de log do servidor
 logging.basicConfig(
-    filename=os.getenv("SERVER_LOG"),        # Nome do arquivo de log
-    filemode='a',                  # Modo de abertura do arquivo (a para append)
-    format='%(asctime)s - %(levelname)s - %(message)s',  # Formato da mensagem de log
-    level=logging.ERROR             # Nível de log (INFO ou superior)
+    filename=os.getenv("SERVER_LOG"),        
+    filemode='a',                  
+    format='%(asctime)s - %(levelname)s - %(message)s',  
+    level=logging.ERROR             
 )
 
 #Definição inicial do conjunto de salas existentes (vazio)
